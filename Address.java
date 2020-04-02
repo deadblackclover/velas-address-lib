@@ -1,137 +1,63 @@
+import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.Arrays;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 class Address {
-    private static final char[] ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz".toCharArray();
-    private static final int BASE_58 = ALPHABET.length;
-    private static final int BASE_256 = 256;
+    private static final String ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+    private static final BigInteger BASE = BigInteger.valueOf(58);
 
-    private static final int[] INDEXES = new int[128];
-    static {
-        Arrays.fill(INDEXES, -1);
-        for (int i = 0; i < ALPHABET.length; i++) {
-            INDEXES[ALPHABET[i]] = i;
+    private static String encode(byte[] input) {
+        BigInteger bi = new BigInteger(1, input);
+        StringBuffer s = new StringBuffer();
+        while (bi.compareTo(BASE) >= 0) {
+            BigInteger mod = bi.mod(BASE);
+            s.insert(0, ALPHABET.charAt(mod.intValue()));
+            bi = bi.subtract(mod).divide(BASE);
         }
+        s.insert(0, ALPHABET.charAt(bi.intValue()));
+        for (byte anInput : input) {
+            if (anInput == 0)
+                s.insert(0, ALPHABET.charAt(0));
+            else
+                break;
+        }
+        return s.toString();
     }
 
-    public static String encode(byte[] input) {
-        if (input.length == 0) {
-            return "";
-        }
-
-        input = copyOfRange(input, 0, input.length);
-
-        int zeroCount = 0;
-        while (zeroCount < input.length && input[zeroCount] == 0) {
-            ++zeroCount;
-        }
-
-        byte[] temp = new byte[input.length * 2];
-        int j = temp.length;
-
-        int startAt = zeroCount;
-        while (startAt < input.length) {
-            byte mod = divmod58(input, startAt);
-            if (input[startAt] == 0) {
-                ++startAt;
-            }
-
-            temp[--j] = (byte) ALPHABET[mod];
-        }
-
-        while (j < temp.length && temp[j] == ALPHABET[0]) {
-            ++j;
-        }
-
-        while (--zeroCount >= 0) {
-            temp[--j] = (byte) ALPHABET[0];
-        }
-
-        byte[] output = copyOfRange(temp, j, temp.length);
-        return new String(output);
-    }
-
-    public static byte[] decode(String input) {
+    private static byte[] decode(String input) throws Exception {
         if (input.length() == 0) {
-            return new byte[0];
+            throw new Exception("Attempt to parse an empty address.");
+        }
+        byte[] bytes = decodeToBigInteger(input).toByteArray();
+
+        boolean stripSignByte = bytes.length > 1 && bytes[0] == 0 && bytes[1] < 0;
+
+        int leadingZeros = 0;
+        for (int i = 0; input.charAt(i) == ALPHABET.charAt(0); i++) {
+            leadingZeros++;
         }
 
-        byte[] input58 = new byte[input.length()];
+        byte[] tmp = new byte[bytes.length - (stripSignByte ? 1 : 0) + leadingZeros];
+        System.arraycopy(bytes, stripSignByte ? 1 : 0, tmp, leadingZeros, tmp.length - leadingZeros);
+        return tmp;
+    }
 
-        for (int i = 0; i < input.length(); ++i) {
-            char c = input.charAt(i);
+    private static BigInteger decodeToBigInteger(String input) throws Exception {
+        BigInteger bi = BigInteger.valueOf(0);
 
-            int digit58 = -1;
-            if (c >= 0 && c < 128) {
-                digit58 = INDEXES[c];
+        for (int i = input.length() - 1; i >= 0; i--) {
+            int alphaIndex = ALPHABET.indexOf(input.charAt(i));
+            if (alphaIndex == -1) {
+                throw new Exception("Illegal character " + input.charAt(i) + " at " + i);
             }
-            if (digit58 < 0) {
-                throw new RuntimeException("Not a Base58 input: " + input);
-            }
-
-            input58[i] = (byte) digit58;
+            bi = bi.add(BigInteger.valueOf(alphaIndex).multiply(BASE.pow(input.length() - 1 - i)));
         }
-
-        int zeroCount = 0;
-        while (zeroCount < input58.length && input58[zeroCount] == 0) {
-            ++zeroCount;
-        }
-
-        byte[] temp = new byte[input.length()];
-        int j = temp.length;
-
-        int startAt = zeroCount;
-        while (startAt < input58.length) {
-            byte mod = divmod256(input58, startAt);
-            if (input58[startAt] == 0) {
-                ++startAt;
-            }
-
-            temp[--j] = mod;
-        }
-
-        while (j < temp.length && temp[j] == 0) {
-            ++j;
-        }
-
-        return copyOfRange(temp, j - zeroCount, temp.length);
+        return bi;
     }
-
-    private static byte divmod58(byte[] number, int startAt) {
-        int remainder = 0;
-        for (int i = startAt; i < number.length; i++) {
-            int digit256 = (int) number[i] & 0xFF;
-            int temp = remainder * BASE_256 + digit256;
-            number[i] = (byte) (temp / BASE_58);
-            remainder = temp % BASE_58;
-        }
-
-        return (byte) remainder;
-    }
-
-    private static byte divmod256(byte[] number58, int startAt) {
-        int remainder = 0;
-        for (int i = startAt; i < number58.length; i++) {
-            int digit58 = (int) number58[i] & 0xFF;
-            int temp = remainder * BASE_58 + digit58;
-            number58[i] = (byte) (temp / BASE_256);
-            remainder = temp % BASE_256;
-        }
-
-        return (byte) remainder;
-    }
-
-    private static byte[] copyOfRange(byte[] source, int from, int to) {
-        byte[] range = new byte[to - from];
-        System.arraycopy(source, from, range, 0, range.length);
-
-        return range;
-    }
-
+    
     private static String bytesToHex(byte[] hash) {
         StringBuilder hex_string = new StringBuilder();
         for (byte b : hash) {
@@ -142,7 +68,7 @@ class Address {
         return hex_string.toString();
     }
 
-    public static byte[] hexToBytes(String s) {
+    private static byte[] hexToBytes(String s) {
         int len = s.length();
         byte[] data = new byte[len / 2];
         for (int i = 0; i < len; i += 2) {
@@ -152,12 +78,12 @@ class Address {
         return data;
     }
 
-    static String sha256(String string) throws NoSuchAlgorithmException {
+    private static String sha256(String string) throws NoSuchAlgorithmException {
         MessageDigest digest = MessageDigest.getInstance("SHA-256");
         return bytesToHex(digest.digest(string.getBytes(StandardCharsets.UTF_8)));
     }
 
-    static String ethToVlx(String address) throws Exception {
+    public static String ethToVlx(String address) throws Exception {
         if (address.length() == 0) {
             throw new Exception("Invalid address");
         }
@@ -176,7 +102,7 @@ class Address {
         return "V" + encode(hexToBytes(long_address));
     }
 
-    static String vlxToEth(String address) throws Exception {
+    public static String vlxToEth(String address) throws Exception {
         if (address.length() == 0) {
             throw new Exception("Invalid address");
         }
