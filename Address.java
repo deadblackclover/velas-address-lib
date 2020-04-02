@@ -211,14 +211,38 @@ class Address {
     }
 
     public static void main(String[] args) throws Exception {
-        String addr = "0x32Be343B94f860124dC4fEe278FDCBD38C102D88";
-        String encaddr = "V5dJeCa7bmkqmZF53TqjRbnB4fG6hxuu4f";
+        String[] ethAddresses = {
+            "0x32Be343B94f860124dC4fEe278FDCBD38C102D88",
+            "0x000000000000000000000000000000000000000f",
+            "0xf000000000000000000000000000000000000000",
+            "0x0000000000000000000000000000000000000001",
+            "0x1000000000000000000000000000000000000000",
+            "0x0000000000000000000000000000000000000000",
+            "0xffffffffffffffffffffffffffffffffffffffff"
+        };
 
-        System.out.println(ethToVlx(addr)); // V5dJeCa7bmkqmZF53TqjRbnB4fG6hxuu4f
-        System.out.println(vlxToEth(encaddr)); // 0x32be343b94f860124dc4fee278fdcbd38c102d88
+        String[] vlxAddresses = {
+            "V5dJeCa7bmkqmZF53TqjRbnB4fG6hxuu4f",
+            "V11111111111111111112jSS6vy",
+            "VNt1B3HD3MghPihCxhwMxNKRerBPPbiwvZ",
+            "V1111111111111111111CdXjnE",
+            "V2Tbp525fpnBRiSt4iPxXkxMyf5ZX7bGAJ",
+            "V111111111111111111113iMDfC",
+            "VQLbz7JHiBTspS962RLKV8GndWFwdcRndD"
+        };
+        
+        for (int i = 0; i < ethAddresses.length; i++) {
+            System.out.println(ethToVlx(ethAddresses[i]));
+        }
 
-        String eth_addr = vlxToEth(ethToVlx(addr));
+        for (int i = 0; i < vlxAddresses.length; i++) {
+            System.out.println(vlxToEth(vlxAddresses[i]));
+        }
 
-        System.out.println(eth_addr.equals(addr.toLowerCase())); // true
+        for (int i = 0; i < ethAddresses.length; i++) {
+            String addr = ethAddresses[i];
+            String eth_addr = vlxToEth(ethToVlx(addr));
+            System.out.println(eth_addr.equals(addr.toLowerCase()));
+        }
     }
 }
