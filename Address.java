@@ -24,7 +24,16 @@ class Address {
             else
                 break;
         }
-        return s.toString();
+
+        int l = 33 - s.toString().length() + 1;
+
+        String result = s.toString();
+
+        for (int i = 0; i < l; i++) {
+            result = ALPHABET.charAt(0) + result;
+        }
+
+        return result;
     }
 
     private static byte[] decode(String input) throws Exception {
@@ -130,7 +139,13 @@ class Address {
                 throw new Exception("Invalid checksum");
             }
 
-            return "0x" + matcher.group(1);
+            String new_address =  "0x" + matcher.group(1);
+
+            if (new_address.length() !== 40) {
+                throw new Exception("Invalid address");
+            }
+
+            return new_address;
         } else {
             throw new Exception("Invalid address");
         }
@@ -149,11 +164,11 @@ class Address {
 
         String[] vlxAddresses = {
             "V5dJeCa7bmkqmZF53TqjRbnB4fG6hxuu4f",
-            "V11111111111111111112jSS6vy",
+            "V1111111111111111111111111112jSS6vy",
             "VNt1B3HD3MghPihCxhwMxNKRerBPPbiwvZ",
-            "V1111111111111111111CdXjnE",
+            "V1111111111111111111111111111CdXjnE",
             "V2Tbp525fpnBRiSt4iPxXkxMyf5ZX7bGAJ",
-            "V111111111111111111113iMDfC",
+            "V11111111111111111111111111113iMDfC",
             "VQLbz7JHiBTspS962RLKV8GndWFwdcRndD"
         };
         
