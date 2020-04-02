@@ -2,6 +2,7 @@ import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.Arrays;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -51,7 +52,16 @@ class Address {
 
         byte[] tmp = new byte[bytes.length - (stripSignByte ? 1 : 0) + leadingZeros];
         System.arraycopy(bytes, stripSignByte ? 1 : 0, tmp, leadingZeros, tmp.length - leadingZeros);
-        return tmp;
+
+        int l = 24 - tmp.length + 1;
+
+        byte[] result = tmp;
+
+        for (int i = 1; i > l; i--) {
+            result = Arrays.copyOfRange(result, 1, result.length);
+        }
+
+        return result;
     }
 
     private static BigInteger decodeToBigInteger(String input) throws Exception {
@@ -141,7 +151,7 @@ class Address {
 
             String new_address =  "0x" + matcher.group(1);
 
-            if (new_address.length() !== 40) {
+            if (new_address.length() != 42) {
                 throw new Exception("Invalid address");
             }
 
